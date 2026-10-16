@@ -1,0 +1,21 @@
+# dev: needs naturedb running (`docker compose up -d` in ~/d/naturedb)
+services:
+  web:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "8090:8090"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    networks:
+      - naturedb
+
+networks:
+  naturedb:
+    name: naturedb_default
+    external: true

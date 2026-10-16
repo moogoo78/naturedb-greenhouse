@@ -1,0 +1,11 @@
+# prod: static build behind the host's reverse proxy (route greenhouse.<domain> -> this port)
+services:
+  web:
+    build:
+      context: .
+      target: prod
+      args:
+        VITE_NATUREDB_BASE: ${VITE_NATUREDB_BASE:?set VITE_NATUREDB_BASE, e.g. https://hast.biodiv.tw}
+    ports:
+      - "8091:80"
+    restart: unless-stopped

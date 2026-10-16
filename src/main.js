@@ -1,0 +1,231 @@
+import Alpine from 'alpinejs';
+import config from './config.js';
+import { get, AuthError, loginUrl, exportUrl, recordUrl } from './api.js';
+import './style.css';
+
+const NONE = '__none__'; // annotation filter: units with no value for the type
+
+function emptyFilters() {
+  return {
+    q: '',
+    collectorId: '',
+    taxon: null, // {id, name}
+    fieldFrom: '',
+    fieldTo: '',
+    catalogNumber: '',
+    status: '',
+    annotations: {}, // {typeId: value | NONE}
+  };
+}
+
+Alpine.data('greenhouse', () => ({
+  config,
+  user: null,
+  collection: null,
+  types: [], // unit annotation types shown as filters
+  collectors: [], // [{value, label, count}] for the whole collection
+  filters: emptyFilters(),
+  sort: config.defaultSort,
+  page: 0,
+  rows: [],
+  total: 0,
+  summary: null,
+  facets: {},
+  loading: false,
+  error: '',
+  notice: '',
+  taxonQuery: '',
+  taxonOptions: [],
+
+  async init() {
+    try {
+      this.user = await get('/api/v1/me');
+      this.collection = this.user.collections.find((c) => c.name === config.collectionName);
+      if (!this.collection) {
+        this.error = `找不到 collection "${config.collectionName}"`;
+        return;
+      }
+      const cid = this.collection.id;
+      const [types, base] = await Promise.all([
+        get(`/api/v1/collections/${cid}/annotation-types`, { target: 'unit' }),
+        get('/api/v1/units/facets', { filter: { collection_id: cid }, fields: 'collector', limit: 1000 }),
+      ]);
+      const wanted = config.annotationFacets;
+      this.types = wanted.length
+        ? wanted.map((name) => types.find((t) => t.name === name)).filter(Boolean)
+        : types;
+      this.collectors = base.facets.collector.filter((x) => x.value !== null);
+
+      window.addEventListener('hashchange', () => this.route());
+      if (!(await this.route())) await this.search();
+    } catch (e) {
+      this.fail(e);
+    }
+  },
+
+  fail(e) {
+    if (e instanceof AuthError) {
+      window.location.href = loginUrl();
+      return;
+    }
+    this.error = e.message;
+  },
+
+  // #/tag/<sn>: QR label lookup. Jumps straight to the record when unique.
+  async route() {
+    const m = window.location.hash.match(/^#\/tag\/(.+)$/);
+    if (!m) return false;
+    const sn = decodeURIComponent(m[1]).trim();
+    this.filters = { ...emptyFilters(), catalogNumber: sn };
+    await this.search();
+    if (this.total === 1) {
+      window.location.href = recordUrl(this.rows[0].entity_key);
+    } else {
+      this.notice = this.total ? `流水號 ${sn} 有 ${this.total} 筆` : `找不到流水號 ${sn}`;
+    }
+    return true;
+  },
+
+  apiFilter() {
+    const f = this.filters;
+    const out = { collection_id: this.collection.id };
+    if (f.q.trim()) out.q = f.q.trim();
+    if (f.collectorId) out.collector_id = [Number(f.collectorId)];
+    if (f.taxon) out.taxon_id = [f.taxon.id];
+    if (f.fieldFrom) out.field_number = f.fieldTo ? `${f.fieldFrom}--${f.fieldTo}` : f.fieldFrom;
+    if (f.catalogNumber.trim()) out.catalog_number = f.catalogNumber.trim();
+    if (f.status) out.disposition = config.status[f.status].disposition;
+    const ann = {};
+    for (const t of this.types) {
+      const v = f.annotations[t.id];
+      if (v === NONE) ann[t.id] = { not: t.options.map((o) => o[0]) };
+      else if (v) ann[t.id] = [v];
+    }
+    if (Object.keys(ann).length) out.annotations = ann;
+    return out;
+  },
+
+  async search(page = 0) {
+    if (!this.collection) return;
+    this.loading = true;
+    this.error = '';
+    this.page = page;
+    const filter = this.apiFilter();
+    const start = page * config.pageSize;
+    try {
+      const fields = [...this.types.map((t) => `annotation:${t.id}`), 'disposition'].join(',');
+      const [list, facets] = await Promise.all([
+        get('/api/v1/units', { filter, sort: this.sort, range: [start, start + config.pageSize] }),
+        get('/api/v1/units/facets', { filter, fields }),
+      ]);
+      this.rows = list.data;
+      this.total = list.total;
+      this.facets = facets.facets;
+      this.summary = facets.summary;
+    } catch (e) {
+      this.fail(e);
+    } finally {
+      this.loading = false;
+    }
+  },
+
+  submit() {
+    this.notice = '';
+    if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
+    this.search(0);
+  },
+
+  reset() {
+    this.filters = emptyFilters();
+    this.taxonQuery = '';
+    this.submit();
+  },
+
+  // --- taxon / section picker (naturedb's taxa search) ---------------------
+  async searchTaxa() {
+    const q = this.taxonQuery.trim();
+    if (q.length < 2) {
+      this.taxonOptions = [];
+      return;
+    }
+    try {
+      const res = await get('/api/v1/taxa', { filter: { q }, range: [0, 15] });
+      this.taxonOptions = res.data;
+    } catch (e) {
+      this.fail(e);
+    }
+  },
+
+  pickTaxon(t) {
+    this.filters.taxon = { id: t.id, name: t.display_name, rank: t.rank };
+    this.taxonQuery = '';
+    this.taxonOptions = [];
+    this.submit();
+  },
+
+  clearTaxon() {
+    this.filters.taxon = null;
+    this.submit();
+  },
+
+  // --- facets -------------------------------------------------------------
+  facetItems(type) {
+    const counts = new Map((this.facets[`annotation:${type.id}`] || []).map((x) => [x.value, x.count]));
+    const items = type.options.map(([value, label]) => ({ value, label, count: counts.get(value) || 0 }));
+    if (counts.get(null)) items.push({ value: NONE, label: '未填', count: counts.get(null) });
+    return items;
+  },
+
+  facetMax(type) {
+    return Math.max(1, ...this.facetItems(type).map((x) => x.count));
+  },
+
+  toggleAnnotation(type, value) {
+    const cur = this.filters.annotations[type.id];
+    this.filters.annotations = { ...this.filters.annotations, [type.id]: cur === value ? '' : value };
+    this.submit();
+  },
+
+  statusCount(key) {
+    const items = this.facets.disposition || [];
+    const dead = config.status.dead.disposition;
+    const n = (pred) => items.filter(pred).reduce((s, x) => s + x.count, 0);
+    return key === 'dead' ? n((x) => x.value === dead) : n((x) => x.value !== dead);
+  },
+
+  // --- table --------------------------------------------------------------
+  cell(col, row) {
+    if (col.annotation) {
+      const v = row.annotations[col.annotation] || '';
+      const type = this.types.find((t) => t.name === col.annotation);
+      const opt = type && type.options.find((o) => o[0] === v);
+      return opt ? opt[1] : v;
+    }
+    return col.value(row) || '';
+  },
+
+  setSort(col) {
+    if (!col.sort) return;
+    this.sort = this.sort === col.sort ? `-${col.sort}` : col.sort;
+    this.search(0);
+  },
+
+  sortMark(col) {
+    if (this.sort === col.sort) return '▲';
+    if (this.sort === `-${col.sort}`) return '▼';
+    return '';
+  },
+
+  get pages() {
+    return Math.max(1, Math.ceil(this.total / config.pageSize));
+  },
+
+  recordUrl,
+
+  exportHref(format) {
+    return this.collection ? exportUrl(this.apiFilter(), format, this.sort) : '#';
+  },
+}));
+
+window.Alpine = Alpine;
+Alpine.start();

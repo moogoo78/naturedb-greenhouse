@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>溫室活體查詢</title>
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <div class="app" x-data="greenhouse" x-cloak>
+      <header class="topbar">
+        <div>
+          <h1 x-text="config.title"></h1>
+          <p class="muted" x-text="collection ? `${config.subtitle} · ${collection.label}` : config.subtitle"></p>
+        </div>
+        <div class="user" x-show="user">
+          <span x-text="user && user.username"></span>
+        </div>
+      </header>
+
+      <div class="alert error" x-show="error" x-text="error"></div>
+      <div class="alert" x-show="notice" x-text="notice"></div>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <form class="filters" @submit.prevent="submit">
+            <label>
+              <span>關鍵字</span>
+              <input type="search" x-model="filters.q" placeholder="學名、採集號、採集者、備註" />
+            </label>
+
+            <label>
+              <span>流水號 (QR)</span>
+              <input type="text" inputmode="numeric" x-model="filters.catalogNumber" />
+            </label>
+
+            <label>
+              <span>採集者</span>
+              <select x-model="filters.collectorId" @change="submit">
+                <option value="">全部</option>
+                <template x-for="c in collectors" :key="c.value">
+                  <option :value="c.value" x-text="`${c.label || c.value} (${c.count})`"></option>
+                </template>
+              </select>
+            </label>
+
+            <div class="field">
+              <span>分類群 / section</span>
+              <template x-if="filters.taxon">
+                <div class="chip">
+                  <span x-text="filters.taxon.name"></span>
+                  <small x-text="filters.taxon.rank"></small>
+                  <button type="button" @click="clearTaxon" aria-label="clear">×</button>
+                </div>
+              </template>
+              <template x-if="!filters.taxon">
+                <div class="autocomplete">
+                  <input type="search" x-model="taxonQuery" @input.debounce.300ms="searchTaxa"
+                         placeholder="Begonia sect. ..." @keydown.escape="taxonOptions = []" />
+                  <ul x-show="taxonOptions.length" @click.outside="taxonOptions = []">
+                    <template x-for="t in taxonOptions" :key="t.id">
+                      <li @click="pickTaxon(t)">
+                        <span x-text="t.display_name"></span>
+                        <small x-text="t.rank"></small>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+            </div>
+
+            <div class="field">
+              <span>採集號範圍</span>
+              <div class="range">
+                <input type="text" inputmode="numeric" x-model="filters.fieldFrom" placeholder="從" />
+                <span>–</span>
+                <input type="text" inputmode="numeric" x-model="filters.fieldTo" placeholder="到" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="primary">查詢</button>
+              <button type="button" @click="reset">清除</button>
+            </div>
+          </form>
+
+          <section class="facet">
+            <h3>狀態</h3>
+            <div class="segmented">
+              <button type="button" :class="{active: !filters.status}" @click="filters.status = ''; submit()">全部</button>
+              <template x-for="key in Object.keys(config.status)" :key="key">
+                <button type="button" :class="{active: filters.status === key}"
+                        @click="filters.status = filters.status === key ? '' : key; submit()">
+                  <span x-text="config.status[key].label"></span>
+                  <small x-text="statusCount(key)"></small>
+                </button>
+              </template>
+            </div>
+          </section>
+
+          <template x-for="type in types" :key="type.id">
+            <section class="facet">
+              <h3 x-text="type.label || type.name"></h3>
+              <ul>
+                <template x-for="item in facetItems(type)" :key="item.value">
+                  <li :class="{active: filters.annotations[type.id] === item.value, empty: !item.count}"
+                      @click="toggleAnnotation(type, item.value)">
+                    <span class="name" x-text="item.label"></span>
+                    <span class="bar"><i :style="`width:${(item.count / facetMax(type)) * 100}%`"></i></span>
+                    <span class="count" x-text="item.count"></span>
+                  </li>
+                </template>
+              </ul>
+            </section>
+          </template>
+        </aside>
+
+        <main class="main">
+          <div class="stats" x-show="summary">
+            <div><b x-text="summary && summary.units"></b><span>株 (units)</span></div>
+            <div><b x-text="summary && summary.taxa"></b><span>分類群</span></div>
+            <div><b x-text="summary && summary.units_without_taxon"></b><span>未鑑定</span></div>
+            <div class="export">
+              <a :href="exportHref('xlsx')">匯出 Excel</a>
+              <a :href="exportHref('csv')">CSV</a>
+            </div>
+          </div>
+
+          <div class="table-wrap" :class="{loading}">
+            <table>
+              <thead>
+                <tr>
+                  <template x-for="col in config.columns" :key="col.label">
+                    <th :class="{sortable: col.sort}" @click="setSort(col)">
+                      <span x-text="col.label"></span> <small x-text="sortMark(col)"></small>
+                    </th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in rows" :key="row.unit_id">
+                  <tr>
+                    <template x-for="(col, i) in config.columns" :key="col.label">
+                      <td :class="col.className">
+                        <template x-if="i === 0">
+                          <a :href="recordUrl(row.entity_key)" target="_blank" rel="noopener" x-text="cell(col, row) || '—'"></a>
+                        </template>
+                        <template x-if="i !== 0">
+                          <span>
+                            <span x-text="cell(col, row)"></span>
+                            <small class="sub" x-show="col.sub && col.sub(row)" x-text="col.sub && col.sub(row)"></small>
+                          </span>
+                        </template>
+                      </td>
+                    </template>
+                  </tr>
+                </template>
+                <tr x-show="!loading && !rows.length">
+                  <td :colspan="config.columns.length" class="empty-row">沒有資料</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <nav class="pager" x-show="total > config.pageSize">
+            <button type="button" :disabled="page === 0" @click="search(page - 1)">‹ 上一頁</button>
+            <span x-text="`${page + 1} / ${pages}`"></span>
+            <button type="button" :disabled="page + 1 >= pages" @click="search(page + 1)">下一頁 ›</button>
+          </nav>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
