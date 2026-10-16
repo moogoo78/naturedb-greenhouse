@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import config from './config.js';
 import { get, AuthError, loginUrl, exportUrl, recordUrl } from './api.js';
+import { abbreviateGenus, escape, scientificNameHtml } from './names.js';
 import './style.css';
 
 const NONE = '__none__'; // annotation filter: units with no value for the type
@@ -28,6 +29,7 @@ Alpine.data('greenhouse', () => ({
   scope: { family: null, genus: null }, // resolved config.taxonomy taxa
   sections: [], // [{id, name}] groupRank taxa under the genus
   filters: emptyFilters(),
+  applied: emptyFilters(), // snapshot of filters behind the current results
   sort: config.defaultSort,
   page: 0,
   rows: [],
@@ -117,6 +119,7 @@ Alpine.data('greenhouse', () => ({
     this.loading = true;
     this.error = '';
     this.page = page;
+    this.applied = JSON.parse(JSON.stringify(this.filters));
     const filter = this.apiFilter();
     const start = page * config.pageSize;
     try {
@@ -201,8 +204,14 @@ Alpine.data('greenhouse', () => ({
     }
   },
 
+  // picker label: abbreviated genus, italics, common name
+  taxonLabel(t) {
+    const name = scientificNameHtml(abbreviateGenus(t.full_scientific_name, config.taxonomy.genus));
+    return t.common_name ? `${name} <small>${escape(t.common_name)}</small>` : name;
+  },
+
   pickTaxon(t) {
-    this.filters.taxon = { id: t.id, name: t.display_name, rank: t.rank };
+    this.filters.taxon = { id: t.id, name: t.display_name, label: this.taxonLabel(t), rank: t.rank };
     this.taxonQuery = '';
     this.taxonOptions = [];
     this.submit();
@@ -263,6 +272,43 @@ Alpine.data('greenhouse', () => ({
 
   get pages() {
     return Math.max(1, Math.ceil(this.total / config.pageSize));
+  },
+
+  // --- applied-filter chips -------------------------------------------------
+  get activeFilters() {
+    const f = this.applied;
+    const out = [];
+    const add = (key, label, value, html = false) => out.push({ key, label, value, html });
+    if (f.q.trim()) add('q', '關鍵字', f.q.trim());
+    if (f.catalogNumber.trim()) add('catalogNumber', '流水號', f.catalogNumber.trim());
+    if (f.collectorId) {
+      const c = this.collectors.find((x) => String(x.value) === String(f.collectorId));
+      add('collectorId', '採集者', c ? c.label || c.value : f.collectorId);
+    }
+    if (f.taxon) add('taxon', '學名', f.taxon.label || escape(f.taxon.name), true);
+    if (f.sectionId) add('sectionId', config.taxonomy.groupLabel, this.sectionName(f.sectionId));
+    if (f.fieldFrom) add('field', '採集號', f.fieldTo ? `${f.fieldFrom}–${f.fieldTo}` : f.fieldFrom);
+    if (f.status) add('status', '狀態', config.status[f.status].label);
+    for (const t of this.types) {
+      const v = f.annotations[t.id];
+      if (!v) continue;
+      const opt = t.options.find((o) => o[0] === v);
+      add(`annotation:${t.id}`, t.label || t.name, v === NONE ? '未填' : opt ? opt[1] : v);
+    }
+    return out;
+  },
+
+  removeFilter(key) {
+    const f = this.filters;
+    if (key.startsWith('annotation:')) {
+      f.annotations = { ...f.annotations, [key.slice(11)]: '' };
+    } else if (key === 'field') {
+      f.fieldFrom = '';
+      f.fieldTo = '';
+    } else {
+      f[key] = emptyFilters()[key];
+    }
+    this.submit();
   },
 
   recordUrl,

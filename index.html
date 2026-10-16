@@ -48,7 +48,7 @@
               <span>學名 <small x-text="filters.sectionId ? `(sect. ${sectionName(filters.sectionId)})` : `(${config.taxonomy.family})`"></small></span>
               <template x-if="filters.taxon">
                 <div class="chip">
-                  <span x-text="filters.taxon.name"></span>
+                  <span x-html="filters.taxon.label"></span>
                   <small x-text="filters.taxon.rank"></small>
                   <button type="button" @click="clearTaxon" aria-label="clear">×</button>
                 </div>
@@ -60,7 +60,7 @@
                   <ul x-show="taxonOptions.length" @click.outside="taxonOptions = []">
                     <template x-for="t in taxonOptions" :key="t.id">
                       <li @click="pickTaxon(t)">
-                        <span x-text="t.display_name"></span>
+                        <span x-html="taxonLabel(t)"></span>
                         <small x-text="t.rank"></small>
                       </li>
                     </template>
@@ -126,6 +126,18 @@
         </aside>
 
         <main class="main">
+          <div class="active-filters" x-show="activeFilters.length">
+            <template x-for="a in activeFilters" :key="a.key">
+              <span class="tag">
+                <small x-text="a.label"></small>
+                <span x-show="a.html" x-html="a.html ? a.value : ''"></span>
+                <span x-show="!a.html" x-text="a.value"></span>
+                <button type="button" @click="removeFilter(a.key)" :aria-label="`移除 ${a.label}`">×</button>
+              </span>
+            </template>
+            <button type="button" class="clear-all" @click="reset">清除全部</button>
+          </div>
+
           <div class="stats" x-show="summary">
             <div><b x-text="summary && summary.units"></b><span>株 (units)</span></div>
             <div><b x-text="summary && summary.taxa"></b><span>分類群</span></div>
