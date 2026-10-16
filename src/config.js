@@ -32,12 +32,14 @@ export default {
   defaultSort: 'catalog_number',
 
   // table columns: label + value(row) (+ optional sort key understood by the API,
-  // html(row) for markup built from escaped text)
+  // html(row) for markup built from escaped text, filter: 'collector' | 'taxon'
+  // to make the cell a click-to-filter button)
   columns: [
     { label: '流水號', sort: 'catalog_number', value: (r) => r.catalog_number },
     {
       label: '採集者',
       value: (r) => (r.collector ? r.collector.full_name || r.collector.full_name_en : r.verbatim_collector),
+      filter: 'collector', // click: filter by this collector
     },
     { label: '採集號', sort: 'field_number', value: (r) => r.field_number },
     { label: '採集日期', sort: 'collect_date', value: (r) => r.collect_date },
@@ -49,6 +51,7 @@ export default {
       html: (r) => (r.taxon ? scientificNameHtml(r.taxon.scientific_name) : ''),
       sub: (r) => (r.taxon ? r.taxon.common_name : ''),
       className: 'taxon',
+      filter: 'taxon', // click: filter by this taxon
     },
     { label: '備註', value: (r) => r.notes, className: 'notes' },
   ],

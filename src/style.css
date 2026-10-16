@@ -132,6 +132,11 @@ th.sortable { cursor: pointer; }
 th small { color: var(--accent); }
 tbody tr:hover { background: #fafbf9; }
 td a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+button.cell-filter {
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left;
+  text-decoration: underline dotted var(--muted); text-underline-offset: 3px;
+}
+button.cell-filter:hover { color: var(--accent); text-decoration: underline solid; }
 td.locality { white-space: normal; min-width: 180px; max-width: 320px; }
 td.notes { white-space: normal; min-width: 160px; color: var(--muted); }
 .sub { display: block; color: var(--muted); font-size: 12px; }

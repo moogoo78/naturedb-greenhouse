@@ -282,6 +282,26 @@ Alpine.data('greenhouse', () => ({
     return col.value(row) || '';
   },
 
+  // click-to-filter cells: only when the row links to a person / taxon
+  canFilter(col, row) {
+    if (col.filter === 'collector') return Boolean(row.collector && row.collector.id);
+    if (col.filter === 'taxon') return Boolean(row.taxon && row.taxon.id);
+    return false;
+  },
+
+  applyCellFilter(col, row) {
+    if (col.filter === 'collector') {
+      this.filters.collectorId = String(row.collector.id);
+    } else if (col.filter === 'taxon') {
+      // the row is already inside the selected section, so keep it
+      const t = { full_scientific_name: row.taxon.scientific_name, common_name: row.taxon.common_name };
+      this.filters.taxon = { id: row.taxon.id, name: row.taxon.scientific_name, label: this.taxonLabel(t), rank: '' };
+      this.taxonQuery = '';
+      this.taxonOptions = [];
+    }
+    this.submit();
+  },
+
   setSort(col) {
     if (!col.sort) return;
     this.sort = this.sort === col.sort ? `-${col.sort}` : col.sort;

@@ -286,6 +286,19 @@
 [data-theme='dads'] .sub { font-size: var(--font-size-14); }
 [data-theme='dads'] .table-wrap.loading { opacity: 0.4; }
 
+[data-theme='dads'] button.cell-filter,
+[data-theme='dads'] button.cell-filter:hover:not(:disabled) {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: var(--font-weight-400);
+  text-align: left;
+}
+[data-theme='dads'] button.cell-filter { color: inherit; text-decoration: underline dotted var(--color-neutral-solid-gray-536); }
+[data-theme='dads'] button.cell-filter:hover:not(:disabled) { color: var(--link); text-decoration: underline solid; text-decoration-thickness: 3px; }
+
 [data-theme='dads'] .pager { gap: 16px; }
 
 /* --- theme switch (both themes) --------------------------------------------------- */

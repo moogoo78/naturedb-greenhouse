@@ -196,8 +196,19 @@
                         </template>
                         <template x-if="i !== 0">
                           <span>
-                            <span x-show="!col.html" x-text="cell(col, row)"></span>
-                            <span x-show="col.html" x-html="col.html ? col.html(row) : ''"></span>
+                            <template x-if="canFilter(col, row)">
+                              <button type="button" class="cell-filter" :title="`篩選：${cell(col, row)}`"
+                                      @click="applyCellFilter(col, row)">
+                                <span x-show="!col.html" x-text="cell(col, row)"></span>
+                                <span x-show="col.html" x-html="col.html ? col.html(row) : ''"></span>
+                              </button>
+                            </template>
+                            <template x-if="!canFilter(col, row)">
+                              <span>
+                                <span x-show="!col.html" x-text="cell(col, row)"></span>
+                                <span x-show="col.html" x-html="col.html ? col.html(row) : ''"></span>
+                              </span>
+                            </template>
                             <small class="sub" x-show="col.sub && col.sub(row)" x-text="col.sub && col.sub(row)"></small>
                           </span>
                         </template>
