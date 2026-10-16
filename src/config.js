@@ -35,22 +35,21 @@ export default {
   // html(row) for markup built from escaped text)
   columns: [
     { label: '流水號', sort: 'catalog_number', value: (r) => r.catalog_number },
-    { label: '採集號', sort: 'field_number', value: (r) => r.field_number },
     {
       label: '採集者',
       value: (r) => (r.collector ? r.collector.full_name || r.collector.full_name_en : r.verbatim_collector),
     },
+    { label: '採集號', sort: 'field_number', value: (r) => r.field_number },
+    { label: '採集日期', sort: 'collect_date', value: (r) => r.collect_date },
+    { label: '地點', value: (r) => r.locality_text, className: 'locality' },
     {
-      label: '學名',
+      label: '物種',
       sort: 'taxon',
       value: (r) => (r.taxon ? r.taxon.scientific_name : ''),
       html: (r) => (r.taxon ? scientificNameHtml(r.taxon.scientific_name) : ''),
       sub: (r) => (r.taxon ? r.taxon.common_name : ''),
       className: 'taxon',
     },
-    { label: '房間', annotation: 'room' },
-    { label: '類別', annotation: 'propagation' },
-    { label: '狀態', value: (r) => (r.disposition === DEAD ? '死亡' : '存活') },
     { label: '備註', value: (r) => r.notes, className: 'notes' },
   ],
 };
