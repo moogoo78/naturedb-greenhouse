@@ -9,7 +9,8 @@ function emptyFilters() {
   return {
     q: '',
     collectorId: '',
-    taxon: null, // {id, name}
+    sectionId: '', // groupRank taxon id (e.g. Begonia section)
+    taxon: null, // scientific name {id, name, rank}
     fieldFrom: '',
     fieldTo: '',
     catalogNumber: '',
@@ -24,6 +25,8 @@ Alpine.data('greenhouse', () => ({
   collection: null,
   types: [], // unit annotation types shown as filters
   collectors: [], // [{value, label, count}] for the whole collection
+  scope: { family: null, genus: null }, // resolved config.taxonomy taxa
+  sections: [], // [{id, name}] groupRank taxa under the genus
   filters: emptyFilters(),
   sort: config.defaultSort,
   page: 0,
@@ -49,6 +52,7 @@ Alpine.data('greenhouse', () => ({
       const [types, base] = await Promise.all([
         get(`/api/v1/collections/${cid}/annotation-types`, { target: 'unit' }),
         get('/api/v1/units/facets', { filter: { collection_id: cid }, fields: 'collector', limit: 1000 }),
+        this.loadTaxonomy(),
       ]);
       const wanted = config.annotationFacets;
       this.types = wanted.length
@@ -91,7 +95,10 @@ Alpine.data('greenhouse', () => ({
     const out = { collection_id: this.collection.id };
     if (f.q.trim()) out.q = f.q.trim();
     if (f.collectorId) out.collector_id = [Number(f.collectorId)];
+    // taxon_id is OR on the server: send only the most specific one. The name
+    // picker is scoped to the selected section, so the name implies it.
     if (f.taxon) out.taxon_id = [f.taxon.id];
+    else if (f.sectionId) out.taxon_id = [Number(f.sectionId)];
     if (f.fieldFrom) out.field_number = f.fieldTo ? `${f.fieldFrom}--${f.fieldTo}` : f.fieldFrom;
     if (f.catalogNumber.trim()) out.catalog_number = f.catalogNumber.trim();
     if (f.status) out.disposition = config.status[f.status].disposition;
@@ -141,15 +148,53 @@ Alpine.data('greenhouse', () => ({
     this.submit();
   },
 
-  // --- taxon / section picker (naturedb's taxa search) ---------------------
+  // --- taxon filters (naturedb's taxa search) -----------------------------
+  // Names repeat across taxon trees (and case varies), so look them up inside
+  // the collection's tree and keep only an exact, case-insensitive match.
+  async findTaxon(name, rank, parentId) {
+    const filter = { q: name, rank, collection_id: this.collection.id };
+    if (parentId) filter.parent_id = parentId;
+    const res = await get('/api/v1/taxa', { filter, range: [0, 20] });
+    return res.data.find((t) => t.full_scientific_name.toLowerCase() === name.toLowerCase()) || null;
+  },
+
+  async loadTaxonomy() {
+    const { family, genus, groupRank } = config.taxonomy;
+    this.scope.family = await this.findTaxon(family, 'family');
+    if (!this.scope.family) throw new Error(`找不到科 ${family}`);
+    this.scope.genus = await this.findTaxon(genus, 'genus', this.scope.family.id);
+    if (!this.scope.genus) throw new Error(`找不到屬 ${genus}`);
+    const res = await get('/api/v1/taxa', {
+      filter: { rank: groupRank, parent_id: this.scope.genus.id, collection_id: this.collection.id },
+      range: [0, 500],
+    });
+    this.sections = res.data
+      .map((t) => ({ id: t.id, name: t.full_scientific_name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  sectionName(id) {
+    const s = this.sections.find((x) => String(x.id) === String(id));
+    return s ? s.name.replace(/^.*\bsect\.\s*/, '') : '';
+  },
+
+  pickSection() {
+    this.filters.taxon = null; // a name from another section would contradict it
+    this.submit();
+  },
+
   async searchTaxa() {
     const q = this.taxonQuery.trim();
     if (q.length < 2) {
       this.taxonOptions = [];
       return;
     }
+    const parentId = this.filters.sectionId ? Number(this.filters.sectionId) : this.scope.family.id;
     try {
-      const res = await get('/api/v1/taxa', { filter: { q }, range: [0, 15] });
+      const res = await get('/api/v1/taxa', {
+        filter: { q, parent_id: parentId, collection_id: this.collection.id },
+        range: [0, 15],
+      });
       this.taxonOptions = res.data;
     } catch (e) {
       this.fail(e);

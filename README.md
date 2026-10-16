@@ -23,7 +23,7 @@ Not logged in → redirected to naturedb's `/admin/login?next=...`, then back.
 
 ## Features
 
-- search: keyword, 流水號 (QR serial = `unit.catalog_number`), collector, taxon or section (includes descendants), field-number range
+- search: keyword, 流水號 (QR serial = `unit.catalog_number`), collector, section (dropdown of `config.taxonomy.groupRank` taxa under the genus), scientific name (autocomplete limited to the family, or to the chosen section), field-number range; taxa include descendants
 - facets with counts: 狀態 (alive/dead from `unit.disposition`), 房間, 類別; click to filter
 - summary: units, taxa, unidentified
 - export current filter: Excel (xlsx) / CSV
@@ -41,7 +41,7 @@ see `app/helpers_unit_query.py` in naturedb for the full format.
 | `GET /api/v1/units?filter=&sort=&range=[0,50]` | result rows |
 | `GET /api/v1/units/facets?filter=&fields=disposition,collector,annotation:<id>` | counts + summary |
 | `GET /api/v1/units/export?filter=&format=csv\|xlsx` | download |
-| `GET /api/v1/taxa?filter={"q":...}` | taxon/section picker |
+| `GET /api/v1/taxa?filter={"q","rank","parent_id","collection_id"}` | section list + name picker, scoped to the collection's taxon tree |
 | `/admin/records/u<unit_id>` | record form (link target) |
 
 ## Production

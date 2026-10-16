@@ -120,7 +120,6 @@ th.sortable { cursor: pointer; }
 th small { color: var(--accent); }
 tbody tr:hover { background: #fafbf9; }
 td a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
-td.taxon > span > span:first-child { font-style: italic; }
 td.notes { white-space: normal; min-width: 160px; color: var(--muted); }
 .sub { display: block; color: var(--muted); font-size: 12px; }
 .empty-row { text-align: center; color: var(--muted); padding: 32px; }

@@ -45,7 +45,7 @@
             </label>
 
             <div class="field">
-              <span>分類群 / section</span>
+              <span>學名 <small x-text="filters.sectionId ? `(sect. ${sectionName(filters.sectionId)})` : `(${config.taxonomy.family})`"></small></span>
               <template x-if="filters.taxon">
                 <div class="chip">
                   <span x-text="filters.taxon.name"></span>
@@ -56,7 +56,7 @@
               <template x-if="!filters.taxon">
                 <div class="autocomplete">
                   <input type="search" x-model="taxonQuery" @input.debounce.300ms="searchTaxa"
-                         placeholder="Begonia sect. ..." @keydown.escape="taxonOptions = []" />
+                         placeholder="Begonia ..." @keydown.escape="taxonOptions = []" />
                   <ul x-show="taxonOptions.length" @click.outside="taxonOptions = []">
                     <template x-for="t in taxonOptions" :key="t.id">
                       <li @click="pickTaxon(t)">
@@ -68,6 +68,16 @@
                 </div>
               </template>
             </div>
+
+            <label>
+              <span x-text="config.taxonomy.groupLabel"></span>
+              <select x-model="filters.sectionId" @change="pickSection">
+                <option value="">全部</option>
+                <template x-for="s in sections" :key="s.id">
+                  <option :value="s.id" x-text="sectionName(s.id)"></option>
+                </template>
+              </select>
+            </label>
 
             <div class="field">
               <span>採集號範圍</span>
@@ -147,7 +157,8 @@
                         </template>
                         <template x-if="i !== 0">
                           <span>
-                            <span x-text="cell(col, row)"></span>
+                            <span x-show="!col.html" x-text="cell(col, row)"></span>
+                            <span x-show="col.html" x-html="col.html ? col.html(row) : ''"></span>
                             <small class="sub" x-show="col.sub && col.sub(row)" x-text="col.sub && col.sub(row)"></small>
                           </span>
                         </template>
