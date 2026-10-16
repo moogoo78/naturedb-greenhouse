@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>溫室活體查詢</title>
+    <script>
+      // set the theme before first paint: ?theme= wins, then the saved choice
+      (function () {
+        var t = new URLSearchParams(location.search).get('theme');
+        try { t = t || localStorage.getItem('naturedb-greenhouse:theme'); } catch (e) {}
+        document.documentElement.dataset.theme = t === 'dads' ? 'dads' : 'classic';
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
@@ -13,8 +21,12 @@
           <h1 x-text="config.title"></h1>
           <p class="muted" x-text="collection ? `${config.subtitle} · ${collection.label}` : config.subtitle"></p>
         </div>
-        <div class="user" x-show="user">
-          <span x-text="user && user.username"></span>
+        <div class="user">
+          <div class="segmented theme-switch" role="group" aria-label="介面">
+            <button type="button" :class="{active: theme === 'classic'}" :aria-pressed="theme === 'classic'" @click="setTheme('classic')">原版</button>
+            <button type="button" :class="{active: theme === 'dads'}" :aria-pressed="theme === 'dads'" @click="setTheme('dads')">DADS</button>
+          </div>
+          <span x-show="user" x-text="user && user.username"></span>
         </div>
       </header>
 
@@ -30,16 +42,40 @@
             </label>
 
             <label>
-              <span>流水號 (QR)</span>
-              <input type="text" inputmode="numeric" x-model="filters.catalogNumber" />
-            </label>
-
-            <label>
               <span>採集者</span>
               <select x-model="filters.collectorId" @change="submit">
                 <option value="">全部</option>
                 <template x-for="c in collectors" :key="c.value">
                   <option :value="c.value" x-text="`${c.label || c.value} (${c.count})`"></option>
+                </template>
+              </select>
+            </label>
+
+            <label>
+              <span>採集號</span>
+              <input type="search" x-model="filters.fieldNumber" placeholder="21299" />
+            </label>
+
+            <div class="field">
+              <span>採集號範圍</span>
+              <div class="range">
+                <input type="text" inputmode="numeric" x-model="filters.fieldFrom" placeholder="從" />
+                <span>–</span>
+                <input type="text" inputmode="numeric" x-model="filters.fieldTo" placeholder="到" />
+              </div>
+            </div>
+
+            <label>
+              <span>流水號 (QR)</span>
+              <input type="text" inputmode="numeric" x-model="filters.catalogNumber" />
+            </label>
+
+            <label>
+              <span x-text="config.taxonomy.groupLabel"></span>
+              <select x-model="filters.sectionId" @change="pickSection">
+                <option value="">全部</option>
+                <template x-for="s in sections" :key="s.id">
+                  <option :value="s.id" x-text="sectionName(s.id)"></option>
                 </template>
               </select>
             </label>
@@ -70,23 +106,14 @@
             </div>
 
             <label>
-              <span x-text="config.taxonomy.groupLabel"></span>
-              <select x-model="filters.sectionId" @change="pickSection">
-                <option value="">全部</option>
-                <template x-for="s in sections" :key="s.id">
-                  <option :value="s.id" x-text="sectionName(s.id)"></option>
-                </template>
-              </select>
+              <span>地點</span>
+              <input type="search" x-model="filters.locality" placeholder="霸王嶺、Juili" />
             </label>
 
-            <div class="field">
-              <span>採集號範圍</span>
-              <div class="range">
-                <input type="text" inputmode="numeric" x-model="filters.fieldFrom" placeholder="從" />
-                <span>–</span>
-                <input type="text" inputmode="numeric" x-model="filters.fieldTo" placeholder="到" />
-              </div>
-            </div>
+            <label>
+              <span>備註</span>
+              <input type="search" x-model="filters.notes" />
+            </label>
 
             <div class="actions">
               <button type="submit" class="primary">查詢</button>

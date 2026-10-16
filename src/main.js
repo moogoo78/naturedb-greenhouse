@@ -3,8 +3,11 @@ import config from './config.js';
 import { get, AuthError, loginUrl, exportUrl, recordUrl } from './api.js';
 import { abbreviateGenus, escape, scientificNameHtml } from './names.js';
 import './style.css';
+import './theme-dads.css';
 
-const NONE = '__none__'; // annotation filter: units with no value for the type
+const THEME_KEY = 'naturedb-greenhouse:theme';
+const NONE = '__none__';
+const FIELD_NUMBER_MAX = 2147483647; // open-ended range: field_number_int is an int column // annotation filter: units with no value for the type
 
 function emptyFilters() {
   return {
@@ -12,9 +15,12 @@ function emptyFilters() {
     collectorId: '',
     sectionId: '', // groupRank taxon id (e.g. Begonia section)
     taxon: null, // scientific name {id, name, rank}
+    fieldNumber: '', // one collector number, exact
     fieldFrom: '',
     fieldTo: '',
     catalogNumber: '',
+    locality: '',
+    notes: '',
     status: '',
     annotations: {}, // {typeId: value | NONE}
   };
@@ -22,6 +28,7 @@ function emptyFilters() {
 
 Alpine.data('greenhouse', () => ({
   config,
+  theme: document.documentElement.dataset.theme || 'classic',
   user: null,
   collection: null,
   types: [], // unit annotation types shown as filters
@@ -69,6 +76,17 @@ Alpine.data('greenhouse', () => ({
     }
   },
 
+  // original layout vs. the Digital Agency design-system refresh; per browser
+  setTheme(theme) {
+    this.theme = theme;
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // private mode / blocked storage: the switch still works for this visit
+    }
+  },
+
   fail(e) {
     if (e instanceof AuthError) {
       window.location.href = loginUrl();
@@ -101,7 +119,13 @@ Alpine.data('greenhouse', () => ({
     // picker is scoped to the selected section, so the name implies it.
     if (f.taxon) out.taxon_id = [f.taxon.id];
     else if (f.sectionId) out.taxon_id = [Number(f.sectionId)];
-    if (f.fieldFrom) out.field_number = f.fieldTo ? `${f.fieldFrom}--${f.fieldTo}` : f.fieldFrom;
+    // field_number specs are AND-ed: the exact number and the range together
+    const fieldNumber = [];
+    if (f.fieldNumber.trim()) fieldNumber.push(f.fieldNumber.trim());
+    if (f.fieldFrom || f.fieldTo) fieldNumber.push(`${f.fieldFrom || 0}--${f.fieldTo || FIELD_NUMBER_MAX}`);
+    if (fieldNumber.length) out.field_number = fieldNumber;
+    if (f.locality.trim()) out.locality = f.locality.trim();
+    if (f.notes.trim()) out.notes = f.notes.trim();
     if (f.catalogNumber.trim()) out.catalog_number = f.catalogNumber.trim();
     if (f.status) out.disposition = config.status[f.status].disposition;
     const ann = {};
@@ -279,15 +303,19 @@ Alpine.data('greenhouse', () => ({
     const f = this.applied;
     const out = [];
     const add = (key, label, value, html = false) => out.push({ key, label, value, html });
+    // same order as the form
     if (f.q.trim()) add('q', '關鍵字', f.q.trim());
-    if (f.catalogNumber.trim()) add('catalogNumber', '流水號', f.catalogNumber.trim());
     if (f.collectorId) {
       const c = this.collectors.find((x) => String(x.value) === String(f.collectorId));
       add('collectorId', '採集者', c ? c.label || c.value : f.collectorId);
     }
-    if (f.taxon) add('taxon', '學名', f.taxon.label || escape(f.taxon.name), true);
+    if (f.fieldNumber.trim()) add('fieldNumber', '採集號', f.fieldNumber.trim());
+    if (f.fieldFrom || f.fieldTo) add('field', '採集號範圍', `${f.fieldFrom || '…'}–${f.fieldTo || '…'}`);
+    if (f.catalogNumber.trim()) add('catalogNumber', '流水號', f.catalogNumber.trim());
     if (f.sectionId) add('sectionId', config.taxonomy.groupLabel, this.sectionName(f.sectionId));
-    if (f.fieldFrom) add('field', '採集號', f.fieldTo ? `${f.fieldFrom}–${f.fieldTo}` : f.fieldFrom);
+    if (f.taxon) add('taxon', '學名', f.taxon.label || escape(f.taxon.name), true);
+    if (f.locality.trim()) add('locality', '地點', f.locality.trim());
+    if (f.notes.trim()) add('notes', '備註', f.notes.trim());
     if (f.status) add('status', '狀態', config.status[f.status].label);
     for (const t of this.types) {
       const v = f.annotations[t.id];
