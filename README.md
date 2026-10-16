@@ -23,6 +23,7 @@ Not logged in → redirected to naturedb's `/admin/login?next=...`, then back.
 
 ## Features
 
+- sources: 溫室活體 (collection `greenhouse`), HAST 標本 (collection `hast`, limited to Begoniaceae) or both; see `config.sources`. QR, status, room and propagation apply to the living collection only, so setting one narrows "both" to it
 - search: keyword, 流水號 (QR serial = `unit.catalog_number`), collector, section (dropdown of `config.taxonomy.groupRank` taxa under the genus), scientific name (autocomplete limited to the family, or to the chosen section), field-number range; taxa include descendants
 - facets with counts: 狀態 (alive/dead from `unit.disposition`), 房間, 類別; click to filter
 - summary: units, taxa, unidentified
@@ -32,7 +33,9 @@ Not logged in → redirected to naturedb's `/admin/login?next=...`, then back.
 ## naturedb API used
 
 All require the JWT cookie from naturedb's `/admin/login`. Unit endpoints share a `filter` JSON;
-see `app/helpers_unit_query.py` in naturedb for the full format.
+see `app/helpers_unit_query.py` in naturedb for the full format. Each source is one sub-filter of `any`
+(OR), e.g. `{"collection_id":[9,1],"any":[{"collection_id":9},{"collection_id":1,"taxon_id":[<Begoniaceae>]}]}`,
+with the common filters at the top level.
 
 | endpoint | use |
 |---|---|

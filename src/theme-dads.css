@@ -213,6 +213,7 @@
 [data-theme='dads'] .facet .bar i { background: var(--accent); border-radius: var(--border-radius-full); }
 
 [data-theme='dads'] .segmented { gap: 0; }
+[data-theme='dads'] .facet.source .hint { margin-top: 8px; font-size: var(--font-size-14); }
 [data-theme='dads'] .segmented button { padding: 4px 8px; }
 [data-theme='dads'] .segmented button:first-child { border-radius: var(--border-radius-8) 0 0 var(--border-radius-8); }
 [data-theme='dads'] .segmented button:last-child { border-radius: 0 var(--border-radius-8) var(--border-radius-8) 0; }

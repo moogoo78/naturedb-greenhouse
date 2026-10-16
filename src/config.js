@@ -10,8 +10,21 @@ export default {
   title: '溫室活體查詢',
   subtitle: 'Begonia living collection',
 
-  // collection.name in naturedb (resolved to an id via /api/v1/me)
+  // collection.name in naturedb (resolved to an id via /api/v1/me) of the living
+  // collection: its taxon tree, annotations, alive/dead and QR serials
   collectionName: 'greenhouse',
+
+  // collections to search; `living` ones take the greenhouse-only filters (QR,
+  // status, annotations), `familyOnly` ones are limited to taxonomy.family.
+  // The source switch offers each one plus all together; the summary counts
+  // each source's units under its `unit` label.
+  sources: [
+    { key: 'greenhouse', label: '溫室活體', collectionName: 'greenhouse', living: true,
+      unit: { label: '株', sub: 'living specimen' } },
+    { key: 'hast', label: 'HAST 標本', collectionName: 'hast', familyOnly: true,
+      unit: { label: '件', sub: 'preserved specimen' } },
+  ],
+  defaultSource: 'greenhouse',
 
   // unit annotation types (by name) shown as filters + facets, in this order;
   // [] = every unit annotation type of the collection
@@ -33,9 +46,17 @@ export default {
 
   // table columns: label + value(row) (+ optional sort key understood by the API,
   // html(row) for markup built from escaped text, filter: 'collector' | 'taxon'
-  // to make the cell a click-to-filter button)
+  // to make the cell a click-to-filter button, mixedLabel when non-living sources
+  // are included, source: true for the source label, only in "all")
   columns: [
-    { label: '流水號', sort: 'catalog_number', value: (r) => r.catalog_number },
+    // a herbarium's catalog number is its specimen number (館號)
+    {
+      label: '流水號',
+      mixedLabel: '流水號 / 館號',
+      sort: 'catalog_number',
+      value: (r) => r.catalog_number,
+    },
+    { label: '來源', source: true }, // shown when several sources are searched
     {
       label: '採集者',
       value: (r) => (r.collector ? r.collector.full_name || r.collector.full_name_en : r.verbatim_collector),

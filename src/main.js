@@ -6,8 +6,9 @@ import './style.css';
 import './theme-dads.css';
 
 const THEME_KEY = 'naturedb-greenhouse:theme';
-const NONE = '__none__';
-const FIELD_NUMBER_MAX = 2147483647; // open-ended range: field_number_int is an int column // annotation filter: units with no value for the type
+const NONE = '__none__'; // annotation filter: units with no value for the type
+const FIELD_NUMBER_MAX = 2147483647; // open-ended range: field_number_int is an int column
+const ALL = 'all';
 
 function emptyFilters() {
   return {
@@ -30,9 +31,11 @@ Alpine.data('greenhouse', () => ({
   config,
   theme: document.documentElement.dataset.theme || 'classic',
   user: null,
-  collection: null,
+  collection: null, // the living collection (config.collectionName)
+  sources: [], // config.sources with their collection resolved
+  source: config.defaultSource, // a source key or ALL
   types: [], // unit annotation types shown as filters
-  collectors: [], // [{value, label, count}] for the whole collection
+  collectors: [], // [{value, label, count}] for the selected sources
   scope: { family: null, genus: null }, // resolved config.taxonomy taxa
   sections: [], // [{id, name}] groupRank taxa under the genus
   filters: emptyFilters(),
@@ -42,7 +45,8 @@ Alpine.data('greenhouse', () => ({
   rows: [],
   total: 0,
   summary: null,
-  facets: {},
+  sourceCounts: [], // [{key, unit, count}] per searched source
+  facets: {}, // living-only facets: status + annotations
   loading: false,
   error: '',
   notice: '',
@@ -52,22 +56,24 @@ Alpine.data('greenhouse', () => ({
   async init() {
     try {
       this.user = await get('/api/v1/me');
-      this.collection = this.user.collections.find((c) => c.name === config.collectionName);
-      if (!this.collection) {
-        this.error = `找不到 collection "${config.collectionName}"`;
+      const byName = (name) => this.user.collections.find((c) => c.name === name);
+      this.collection = byName(config.collectionName);
+      const missing = [config.collectionName, ...config.sources.map((s) => s.collectionName)].filter((n) => !byName(n));
+      if (missing.length) {
+        this.error = `找不到 collection ${missing.map((n) => `"${n}"`).join(', ')}`;
         return;
       }
+      this.sources = config.sources.map((s) => ({ ...s, collection: byName(s.collectionName) }));
       const cid = this.collection.id;
-      const [types, base] = await Promise.all([
+      const [types] = await Promise.all([
         get(`/api/v1/collections/${cid}/annotation-types`, { target: 'unit' }),
-        get('/api/v1/units/facets', { filter: { collection_id: cid }, fields: 'collector', limit: 1000 }),
         this.loadTaxonomy(),
       ]);
       const wanted = config.annotationFacets;
       this.types = wanted.length
         ? wanted.map((name) => types.find((t) => t.name === name)).filter(Boolean)
         : types;
-      this.collectors = base.facets.collector.filter((x) => x.value !== null);
+      await this.loadCollectors();
 
       window.addEventListener('hashchange', () => this.route());
       if (!(await this.route())) await this.search();
@@ -100,6 +106,10 @@ Alpine.data('greenhouse', () => ({
     const m = window.location.hash.match(/^#\/tag\/(.+)$/);
     if (!m) return false;
     const sn = decodeURIComponent(m[1]).trim();
+    if (this.source !== config.defaultSource) {
+      this.source = config.defaultSource; // QR serials belong to the living collection
+      await this.loadCollectors();
+    }
     this.filters = { ...emptyFilters(), catalogNumber: sn };
     await this.search();
     if (this.total === 1) {
@@ -110,9 +120,91 @@ Alpine.data('greenhouse', () => ({
     return true;
   },
 
-  apiFilter() {
+  // --- sources ------------------------------------------------------------
+  get activeSources() {
+    return this.source === ALL ? this.sources : this.sources.filter((s) => s.key === this.source);
+  },
+
+  get hasLiving() {
+    return this.activeSources.some((s) => s.living);
+  },
+
+  get mixed() {
+    return this.activeSources.some((s) => !s.living);
+  },
+
+  get scopeHint() {
+    const limited = this.activeSources.filter((s) => s.familyOnly).map((s) => s.label);
+    return limited.length ? `${limited.join('、')}僅含 ${config.taxonomy.family}` : '';
+  },
+
+  sourceLabel(collectionId) {
+    const s = this.sources.find((x) => x.collection.id === collectionId);
+    return s ? s.label : '';
+  },
+
+  async setSource(key) {
+    if (key === this.source) return;
+    this.source = key;
+    if (!this.hasLiving) {
+      // greenhouse-only filters mean nothing for herbarium specimens
+      Object.assign(this.filters, { catalogNumber: '', status: '', annotations: {} });
+    }
+    try {
+      await this.loadCollectors();
+    } catch (e) {
+      this.fail(e);
+    }
+    this.submit();
+  },
+
+  // collectors of the selected sources (their scope, no other filters)
+  async loadCollectors() {
+    const res = await get('/api/v1/units/facets', {
+      filter: this.scopeFilter(this.activeSources, {}),
+      fields: 'collector',
+      limit: 1000,
+    });
+    this.collectors = res.facets.collector.filter((x) => x.value !== null);
+    const keep = this.collectors.some((c) => String(c.value) === String(this.filters.collectorId));
+    if (!keep) this.filters.collectorId = '';
+  },
+
+  // sources' scopes OR-ed (`any`), each a sub-filter: living sources take the
+  // living filters, the others are limited to the family. Common filters stay at
+  // the top so they never replace a sub-filter's own taxon scope.
+  scopeFilter(sources, living) {
+    const hasLivingFilter = Object.keys(living).length > 0;
+    const picked = hasLivingFilter ? sources.filter((s) => s.living) : sources;
+    return {
+      collection_id: picked.map((s) => s.collection.id),
+      any: picked.map((s) => {
+        const sub = { collection_id: s.collection.id };
+        if (s.living) Object.assign(sub, living);
+        if (s.familyOnly) sub.taxon_id = [this.scope.family.id];
+        return sub;
+      }),
+    };
+  },
+
+  livingFilter() {
     const f = this.filters;
-    const out = { collection_id: this.collection.id };
+    const out = {};
+    if (f.catalogNumber.trim()) out.catalog_number = f.catalogNumber.trim();
+    if (f.status) out.disposition = config.status[f.status].disposition;
+    const ann = {};
+    for (const t of this.types) {
+      const v = f.annotations[t.id];
+      if (v === NONE) ann[t.id] = { not: t.options.map((o) => o[0]) };
+      else if (v) ann[t.id] = [v];
+    }
+    if (Object.keys(ann).length) out.annotations = ann;
+    return out;
+  },
+
+  apiFilter(sources = this.activeSources) {
+    const f = this.filters;
+    const out = this.scopeFilter(sources, this.livingFilter());
     if (f.q.trim()) out.q = f.q.trim();
     if (f.collectorId) out.collector_id = [Number(f.collectorId)];
     // taxon_id is OR on the server: send only the most specific one. The name
@@ -126,15 +218,6 @@ Alpine.data('greenhouse', () => ({
     if (fieldNumber.length) out.field_number = fieldNumber;
     if (f.locality.trim()) out.locality = f.locality.trim();
     if (f.notes.trim()) out.notes = f.notes.trim();
-    if (f.catalogNumber.trim()) out.catalog_number = f.catalogNumber.trim();
-    if (f.status) out.disposition = config.status[f.status].disposition;
-    const ann = {};
-    for (const t of this.types) {
-      const v = f.annotations[t.id];
-      if (v === NONE) ann[t.id] = { not: t.options.map((o) => o[0]) };
-      else if (v) ann[t.id] = [v];
-    }
-    if (Object.keys(ann).length) out.annotations = ann;
     return out;
   },
 
@@ -147,15 +230,27 @@ Alpine.data('greenhouse', () => ({
     const filter = this.apiFilter();
     const start = page * config.pageSize;
     try {
-      const fields = [...this.types.map((t) => `annotation:${t.id}`), 'disposition'].join(',');
-      const [list, facets] = await Promise.all([
+      // status/annotation counts over the living sources only: a herbarium sheet
+      // is neither alive nor in a room
+      // (without other sources the main filter is the living one: one request)
+      const living = this.activeSources.filter((s) => s.living);
+      const livingFields = [...this.types.map((t) => `annotation:${t.id}`), 'disposition'];
+      const [list, main, livingFacets] = await Promise.all([
         get('/api/v1/units', { filter, sort: this.sort, range: [start, start + config.pageSize] }),
-        get('/api/v1/units/facets', { filter, fields }),
+        get('/api/v1/units/facets', {
+          filter,
+          fields: ['collection', ...(this.mixed ? [] : livingFields)].join(','),
+        }),
+        this.mixed && living.length
+          ? get('/api/v1/units/facets', { filter: this.apiFilter(living), fields: livingFields.join(',') })
+          : null,
       ]);
       this.rows = list.data;
       this.total = list.total;
-      this.facets = facets.facets;
-      this.summary = facets.summary;
+      this.facets = this.mixed ? (livingFacets ? livingFacets.facets : {}) : main.facets;
+      this.summary = main.summary;
+      const counts = new Map(main.facets.collection.map((x) => [x.value, x.count]));
+      this.sourceCounts = this.activeSources.map((s) => ({ key: s.key, unit: s.unit, count: counts.get(s.collection.id) || 0 }));
     } catch (e) {
       this.fail(e);
     } finally {
@@ -272,7 +367,16 @@ Alpine.data('greenhouse', () => ({
   },
 
   // --- table --------------------------------------------------------------
+  get columns() {
+    return config.columns.filter((c) => !c.source || this.source === ALL);
+  },
+
+  colLabel(col) {
+    return this.mixed && col.mixedLabel ? col.mixedLabel : col.label;
+  },
+
   cell(col, row) {
+    if (col.source) return this.sourceLabel(row.collection_id);
     if (col.annotation) {
       const v = row.annotations[col.annotation] || '';
       const type = this.types.find((t) => t.name === col.annotation);

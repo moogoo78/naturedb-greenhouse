@@ -35,6 +35,19 @@
 
       <div class="layout">
         <aside class="sidebar">
+          <section class="facet source">
+            <h3>資料來源</h3>
+            <div class="segmented" role="group" aria-label="資料來源">
+              <template x-for="s in sources" :key="s.key">
+                <button type="button" :class="{active: source === s.key}" :aria-pressed="source === s.key"
+                        @click="setSource(s.key)" x-text="s.label"></button>
+              </template>
+              <button type="button" :class="{active: source === 'all'}" :aria-pressed="source === 'all'"
+                      @click="setSource('all')">全部</button>
+            </div>
+            <p class="hint" x-show="mixed" x-text="scopeHint"></p>
+          </section>
+
           <form class="filters" @submit.prevent="submit">
             <label>
               <span>關鍵字</span>
@@ -65,7 +78,7 @@
               </div>
             </div>
 
-            <label>
+            <label x-show="hasLiving">
               <span>流水號 (QR)</span>
               <input type="text" inputmode="numeric" x-model="filters.catalogNumber" />
             </label>
@@ -121,7 +134,7 @@
             </div>
           </form>
 
-          <section class="facet">
+          <section class="facet" x-show="hasLiving">
             <h3>狀態</h3>
             <div class="segmented">
               <button type="button" :class="{active: !filters.status}" @click="filters.status = ''; submit()">全部</button>
@@ -136,7 +149,7 @@
           </section>
 
           <template x-for="type in types" :key="type.id">
-            <section class="facet">
+            <section class="facet" x-show="hasLiving">
               <h3 x-text="type.label || type.name"></h3>
               <ul>
                 <template x-for="item in facetItems(type)" :key="item.value">
@@ -166,7 +179,9 @@
           </div>
 
           <div class="stats" x-show="summary">
-            <div><b x-text="summary && summary.units"></b><span>株 (units)</span></div>
+            <template x-for="c in sourceCounts" :key="c.key">
+              <div><b x-text="c.count"></b><span x-text="`${c.unit.label} (${c.unit.sub})`"></span></div>
+            </template>
             <div><b x-text="summary && summary.taxa"></b><span>分類群</span></div>
             <div><b x-text="summary && summary.units_without_taxon"></b><span>未鑑定</span></div>
             <div class="export">
@@ -179,9 +194,9 @@
             <table>
               <thead>
                 <tr>
-                  <template x-for="col in config.columns" :key="col.label">
+                  <template x-for="col in columns" :key="col.label">
                     <th :class="{sortable: col.sort}" @click="setSort(col)">
-                      <span x-text="col.label"></span> <small x-text="sortMark(col)"></small>
+                      <span x-text="colLabel(col)"></span> <small x-text="sortMark(col)"></small>
                     </th>
                   </template>
                 </tr>
@@ -189,7 +204,7 @@
               <tbody>
                 <template x-for="row in rows" :key="row.unit_id">
                   <tr>
-                    <template x-for="(col, i) in config.columns" :key="col.label">
+                    <template x-for="(col, i) in columns" :key="col.label">
                       <td :class="col.className">
                         <template x-if="i === 0">
                           <a :href="recordUrl(row.entity_key)" target="_blank" rel="noopener" x-text="cell(col, row) || '—'"></a>
@@ -217,7 +232,7 @@
                   </tr>
                 </template>
                 <tr x-show="!loading && !rows.length">
-                  <td :colspan="config.columns.length" class="empty-row">沒有資料</td>
+                  <td :colspan="columns.length" class="empty-row">沒有資料</td>
                 </tr>
               </tbody>
             </table>
