@@ -178,7 +178,18 @@
             <button type="button" class="clear-all" @click="reset">清除全部</button>
           </div>
 
+          <div class="view-switch">
+            <span>列表</span>
+            <div class="segmented" role="group" aria-label="列表">
+              <button type="button" :class="{active: view === 'unit'}" :aria-pressed="view === 'unit'"
+                      @click="setView('unit')">單件</button>
+              <button type="button" :class="{active: view === 'record'}" :aria-pressed="view === 'record'"
+                      @click="setView('record')">採集號</button>
+            </div>
+          </div>
+
           <div class="stats" x-show="summary">
+            <div x-show="view === 'record'"><b x-text="total"></b><span>採集號 (records)</span></div>
             <template x-for="c in sourceCounts" :key="c.key">
               <div><b x-text="c.count"></b><span x-text="`${c.unit.label} (${c.unit.sub})`"></span></div>
             </template>
@@ -202,14 +213,43 @@
                 </tr>
               </thead>
               <tbody>
-                <template x-for="row in rows" :key="row.unit_id">
+                <template x-for="row in rows" :key="row.entity_key">
                   <tr>
                     <template x-for="(col, i) in columns" :key="col.label">
                       <td :class="col.className">
-                        <template x-if="i === 0">
+                        <template x-if="isLink(col)">
                           <a :href="recordUrl(row.entity_key)" target="_blank" rel="noopener" x-text="cell(col, row) || '—'"></a>
                         </template>
-                        <template x-if="i !== 0">
+                        <template x-if="!isLink(col) && col.units">
+                          <div>
+                            <small class="unit-counts" x-text="unitCounts(row)"></small>
+                            <ul class="unit-chips">
+                              <template x-for="u in row.units" :key="u.unit_id">
+                                <li class="unit-chip" :class="{dead: isDead(u), preserved: !(unitSource(u) || {}).living}">
+                                  <template x-if="u.cover_image_url">
+                                    <button type="button" class="thumb" @click="openImage(u, $el)"
+                                            :aria-label="`影像 ${u.catalog_number || ''}`">
+                                      <img :src="imageUrl(u, config.image.thumb)" alt="" loading="lazy" decoding="async" />
+                                    </button>
+                                  </template>
+                                  <a :href="recordUrl(u.entity_key)" target="_blank" rel="noopener"
+                                     :title="chipTitle(u)" x-text="chipLabel(u)"></a>
+                                </li>
+                              </template>
+                            </ul>
+                          </div>
+                        </template>
+                        <template x-if="!isLink(col) && col.image">
+                          <span>
+                            <template x-if="row.cover_image_url">
+                              <button type="button" class="thumb" @click="openImage(row, $el)"
+                                      :aria-label="`影像 ${row.catalog_number || ''}`">
+                                <img :src="imageUrl(row, config.image.thumb)" alt="" loading="lazy" decoding="async" />
+                              </button>
+                            </template>
+                          </span>
+                        </template>
+                        <template x-if="!isLink(col) && !col.image && !col.units">
                           <span>
                             <template x-if="canFilter(col, row)">
                               <button type="button" class="cell-filter" :title="`篩選：${cell(col, row)}`"
@@ -244,6 +284,20 @@
             <button type="button" :disabled="page + 1 >= pages" @click="search(page + 1)">下一頁 ›</button>
           </nav>
         </main>
+      </div>
+
+      <div class="lightbox" x-show="preview" x-transition.opacity @click.self="closeImage"
+           @keydown.escape.window="closeImage" role="dialog" aria-modal="true" aria-label="標本影像">
+        <template x-if="preview">
+          <figure>
+            <button type="button" class="close" x-ref="previewClose" @click="closeImage" aria-label="關閉">×</button>
+            <img :src="preview.src" :alt="preview.caption" />
+            <figcaption>
+              <span x-text="preview.caption"></span>
+              <a :href="preview.full" target="_blank" rel="noopener">原始影像</a>
+            </figcaption>
+          </figure>
+        </template>
       </div>
     </div>
   </body>

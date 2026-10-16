@@ -133,6 +133,37 @@ th.sortable { cursor: pointer; }
 th small { color: var(--accent); }
 tbody tr:hover { background: #fafbf9; }
 td a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+button.thumb { padding: 0; border: 1px solid var(--line); border-radius: 4px; background: #fff; line-height: 0; }
+button.thumb img { width: 48px; height: 64px; object-fit: cover; border-radius: 3px; }
+button.thumb:hover { border-color: var(--accent); }
+
+.lightbox {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(0, 0, 0, .75);
+}
+.lightbox figure { position: relative; margin: 0; max-width: min(960px, 100%); max-height: 100%; display: flex; flex-direction: column; }
+.lightbox img { max-width: 100%; max-height: calc(100vh - 96px); object-fit: contain; background: #fff; border-radius: 4px; }
+.lightbox figcaption { display: flex; justify-content: space-between; gap: 16px; padding: 8px 2px 0; color: #fff; }
+.lightbox figcaption a { color: #fff; }
+.lightbox .close {
+  position: absolute; top: -12px; right: -12px; width: 36px; height: 36px; padding: 0;
+  border-radius: 50%; font-size: 20px; line-height: 1; background: #fff;
+}
+
+.view-switch { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.view-switch .segmented { width: 200px; }
+td.units { white-space: normal; min-width: 220px; }
+.unit-counts { display: block; color: var(--muted); margin-bottom: 4px; }
+.unit-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.unit-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px 1px 1px;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--accent-soft);
+}
+.unit-chip a { font-weight: 400; padding-left: 4px; }
+.unit-chip.preserved { background: #fff; }
+.unit-chip.dead a { color: var(--muted); text-decoration: line-through; }
+.unit-chip button.thumb img { width: 24px; height: 32px; }
+
 button.cell-filter {
   padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left;
   text-decoration: underline dotted var(--muted); text-underline-offset: 3px;

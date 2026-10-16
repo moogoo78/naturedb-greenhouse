@@ -9,6 +9,7 @@ const THEME_KEY = 'naturedb-greenhouse:theme';
 const NONE = '__none__'; // annotation filter: units with no value for the type
 const FIELD_NUMBER_MAX = 2147483647; // open-ended range: field_number_int is an int column
 const ALL = 'all';
+const VIEWS = { unit: '/api/v1/units', record: '/api/v1/units/records' };
 
 function emptyFilters() {
   return {
@@ -34,6 +35,7 @@ Alpine.data('greenhouse', () => ({
   collection: null, // the living collection (config.collectionName)
   sources: [], // config.sources with their collection resolved
   source: config.defaultSource, // a source key or ALL
+  view: 'unit', // 'unit': a row per unit; 'record': a row per record with its units
   types: [], // unit annotation types shown as filters
   collectors: [], // [{value, label, count}] for the selected sources
   scope: { family: null, genus: null }, // resolved config.taxonomy taxa
@@ -50,6 +52,8 @@ Alpine.data('greenhouse', () => ({
   loading: false,
   error: '',
   notice: '',
+  preview: null, // {src, full, caption} of the open specimen image
+  previewOpener: null, // element to return focus to
   taxonQuery: '',
   taxonOptions: [],
 
@@ -236,7 +240,7 @@ Alpine.data('greenhouse', () => ({
       const living = this.activeSources.filter((s) => s.living);
       const livingFields = [...this.types.map((t) => `annotation:${t.id}`), 'disposition'];
       const [list, main, livingFacets] = await Promise.all([
-        get('/api/v1/units', { filter, sort: this.sort, range: [start, start + config.pageSize] }),
+        get(VIEWS[this.view], { filter, sort: this.sort, range: [start, start + config.pageSize] }),
         get('/api/v1/units/facets', {
           filter,
           fields: ['collection', ...(this.mixed ? [] : livingFields)].join(','),
@@ -367,8 +371,74 @@ Alpine.data('greenhouse', () => ({
   },
 
   // --- table --------------------------------------------------------------
+  setView(view) {
+    if (view === this.view) return;
+    this.view = view;
+    this.search(0);
+  },
+
   get columns() {
-    return config.columns.filter((c) => !c.source || this.source === ALL);
+    return config.columns.filter(
+      (c) => (!c.view || c.view === this.view) && (!c.source || this.source === ALL) && (!c.image || this.mixed),
+    );
+  },
+
+  isLink(col) {
+    return col.link === this.view;
+  },
+
+  // --- record view: a record's units as chips ------------------------------
+  unitSource(u) {
+    return this.sources.find((s) => s.collection.id === u.collection_id);
+  },
+
+  isDead(u) {
+    return u.disposition === config.status.dead.disposition;
+  },
+
+  chipLabel(u) {
+    const s = this.unitSource(u);
+    const number = u.catalog_number || '—';
+    if (!s || !s.living) return `館號 ${number}`;
+    const a = config.unitChip.annotation;
+    const type = this.types.find((t) => t.name === a);
+    const v = (a && u.annotations[a]) || '';
+    const opt = type && type.options.find((o) => o[0] === v);
+    return v ? `${number} · ${opt ? opt[1] : v}` : number;
+  },
+
+  chipTitle(u) {
+    const s = this.unitSource(u);
+    return [s && s.label, this.chipLabel(u), this.isDead(u) && config.status.dead.label].filter(Boolean).join(' · ');
+  },
+
+  // "8 株 · 1 件"
+  unitCounts(row) {
+    return this.activeSources
+      .map((s) => [s, row.units.filter((u) => u.collection_id === s.collection.id).length])
+      .filter(([, n]) => n)
+      .map(([s, n]) => `${n} ${s.unit.label}`)
+      .join(' · ');
+  },
+
+  imageUrl(row, size) {
+    return row.cover_image_url ? config.image.size(row.cover_image_url, size) : '';
+  },
+
+  openImage(row, opener) {
+    this.previewOpener = opener;
+    this.preview = {
+      src: this.imageUrl(row, config.image.preview),
+      full: this.imageUrl(row, config.image.full),
+      caption: [row.catalog_number, row.taxon && row.taxon.scientific_name].filter(Boolean).join(' · '),
+    };
+    this.$nextTick(() => this.$refs.previewClose && this.$refs.previewClose.focus());
+  },
+
+  closeImage() {
+    if (!this.preview) return;
+    this.preview = null;
+    if (this.previewOpener) this.previewOpener.focus();
   },
 
   colLabel(col) {

@@ -41,13 +41,29 @@ export default {
     dead: { label: '死亡', disposition: DEAD },
   },
 
+  // specimen images: the API returns the stored cover image URL; this storage
+  // keeps size variants next to it (-s 9KB, -m, -l, -x, -o original)
+  image: {
+    size: (url, s) => (/-m\.jpg$/.test(url) ? url.replace(/-m\.jpg$/, `-${s}.jpg`) : url),
+    thumb: 's',
+    preview: 'l',
+    full: 'o',
+  },
+
+  // record view: one row per record (collector + number) with its units as
+  // chips; a living unit's chip shows this annotation (e.g. its room)
+  unitChip: { annotation: 'room' },
+
   pageSize: 50,
   defaultSort: 'catalog_number',
 
   // table columns: label + value(row) (+ optional sort key understood by the API,
   // html(row) for markup built from escaped text, filter: 'collector' | 'taxon'
   // to make the cell a click-to-filter button, mixedLabel when non-living sources
-  // are included, source: true for the source label, only in "all")
+  // are included, source: true for the source label, only in "all", image: true
+  // for the cover image thumbnail, only with non-living sources; view: 'unit' |
+  // 'record' to show in one list view only; link: 'unit' | 'record' links the
+  // cell to the admin form in that view; units: true lists the record's units)
   columns: [
     // a herbarium's catalog number is its specimen number (館號)
     {
@@ -55,14 +71,17 @@ export default {
       mixedLabel: '流水號 / 館號',
       sort: 'catalog_number',
       value: (r) => r.catalog_number,
+      link: 'unit',
+      view: 'unit',
     },
-    { label: '來源', source: true }, // shown when several sources are searched
+    { label: '來源', source: true, view: 'unit' }, // shown when several sources are searched
+    { label: '影像', image: true, view: 'unit' }, // shown when a source with images is searched
     {
       label: '採集者',
       value: (r) => (r.collector ? r.collector.full_name || r.collector.full_name_en : r.verbatim_collector),
       filter: 'collector', // click: filter by this collector
     },
-    { label: '採集號', sort: 'field_number', value: (r) => r.field_number },
+    { label: '採集號', sort: 'field_number', value: (r) => r.field_number, link: 'record' },
     { label: '採集日期', sort: 'collect_date', value: (r) => r.collect_date },
     { label: '地點', value: (r) => r.locality_text, className: 'locality' },
     {
@@ -74,6 +93,7 @@ export default {
       className: 'taxon',
       filter: 'taxon', // click: filter by this taxon
     },
-    { label: '備註', value: (r) => r.notes, className: 'notes' },
+    { label: '備註', value: (r) => r.notes, className: 'notes', view: 'unit' },
+    { label: '植株 / 標本', units: true, className: 'units', view: 'record' },
   ],
 };

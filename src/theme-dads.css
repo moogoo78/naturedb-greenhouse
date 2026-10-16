@@ -300,6 +300,21 @@
 [data-theme='dads'] button.cell-filter { color: inherit; text-decoration: underline dotted var(--color-neutral-solid-gray-536); }
 [data-theme='dads'] button.cell-filter:hover:not(:disabled) { color: var(--link); text-decoration: underline solid; text-decoration-thickness: 3px; }
 
+[data-theme='dads'] button.thumb,
+[data-theme='dads'] button.thumb:hover:not(:disabled) {
+  min-height: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--border-radius-4);
+  background: var(--color-neutral-white); text-decoration: none;
+}
+[data-theme='dads'] button.thumb:hover:not(:disabled) { border-color: var(--accent); }
+[data-theme='dads'] .lightbox .close { min-height: 0; padding: 0; border-radius: var(--border-radius-full); }
+[data-theme='dads'] .lightbox figcaption a { color: var(--color-neutral-white); }
+
+[data-theme='dads'] .view-switch { font-size: var(--font-size-14); }
+[data-theme='dads'] .unit-chip { border-color: var(--line); border-radius: var(--border-radius-4); background: var(--color-key-50); }
+[data-theme='dads'] .unit-chip.preserved { background: var(--color-neutral-white); }
+[data-theme='dads'] .unit-chip a { font-weight: var(--font-weight-400); }
+[data-theme='dads'] .unit-chip.dead a { color: var(--color-neutral-solid-gray-536); }
+
 [data-theme='dads'] .pager { gap: 16px; }
 
 /* --- theme switch (both themes) --------------------------------------------------- */
