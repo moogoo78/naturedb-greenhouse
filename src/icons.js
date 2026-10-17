@@ -9,5 +9,7 @@ export default {
   // living plant
   leaf: svg('<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>'),
   // herbarium sheet: a pressed specimen on paper
+  // opens outside this app (naturedb's public specimen page)
+  external: svg('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
   sheet: svg('<rect x="5" y="2" width="14" height="20" rx="1.5"/><path d="M12 18V9"/><path d="M12 13c-2.5 0-3.5-1.5-3.5-3.5 2 0 3.5 1 3.5 3.5Z"/><path d="M12 11c2.5 0 3.5-1.5 3.5-3.5-2 0-3.5 1-3.5 3.5Z"/>'),
 };

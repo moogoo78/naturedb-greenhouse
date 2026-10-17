@@ -162,6 +162,11 @@ td.basis { width: 1%; text-align: center; }
 .view-switch .segmented { width: 200px; }
 td.units { white-space: normal; min-width: 220px; }
 .unit-counts { display: block; color: var(--muted); margin-bottom: 4px; }
+.link-cell { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+a.public-link { display: inline-flex; color: var(--muted); font-weight: 400; }
+a.public-link:hover { color: var(--accent); }
+a.public-link svg { width: 14px; height: 14px; }
+.unit-chip a.public-link { padding-left: 2px; }
 .unit-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .unit-chip {
   display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px 1px 1px;

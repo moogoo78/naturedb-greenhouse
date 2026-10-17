@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs';
 import config from './config.js';
-import { get, AuthError, loginUrl, exportUrl, recordUrl } from './api.js';
+import { get, AuthError, loginUrl, exportUrl, recordUrl, publicUrl } from './api.js';
 import { abbreviateGenus, escape, scientificNameHtml } from './names.js';
 import icons from './icons.js';
 import './style.css';
@@ -557,6 +557,8 @@ Alpine.data('greenhouse', () => ({
   },
 
   recordUrl,
+  publicUrl,
+  externalIcon: icons.external,
 
   exportHref(format) {
     return this.collection ? exportUrl(this.apiFilter(), format, this.sort) : '#';

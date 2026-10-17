@@ -34,3 +34,6 @@ export function loginUrl() {
 export const exportUrl = (filter, format, sort) => url('/api/v1/units/export', { filter, format, sort });
 
 export const recordUrl = (entityKey) => url(`/admin/records/${entityKey}`);
+
+// a unit's public specimen page on naturedb (detail_path from the unit API)
+export const publicUrl = (path) => (path ? url(path) : '');

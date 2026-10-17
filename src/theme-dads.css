@@ -314,6 +314,7 @@
 [data-theme='dads'] .unit-chip { border-color: var(--line); border-radius: var(--border-radius-4); background: var(--color-key-50); }
 [data-theme='dads'] .unit-chip.preserved { background: var(--color-neutral-white); }
 [data-theme='dads'] .unit-chip a { font-weight: var(--font-weight-400); }
+[data-theme='dads'] a.public-link { color: var(--link); font-weight: var(--font-weight-400); }
 [data-theme='dads'] .unit-chip.dead a { color: var(--color-neutral-solid-gray-536); }
 
 [data-theme='dads'] .pager { gap: 16px; }

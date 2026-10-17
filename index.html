@@ -218,7 +218,13 @@
                     <template x-for="(col, i) in columns" :key="col.label">
                       <td :class="col.className">
                         <template x-if="isLink(col)">
-                          <a :href="recordUrl(row.entity_key)" target="_blank" rel="noopener" x-text="cell(col, row) || '—'"></a>
+                          <span class="link-cell">
+                            <a :href="recordUrl(row.entity_key)" target="_blank" rel="noopener" x-text="cell(col, row) || '—'"></a>
+                            <template x-if="row.detail_path">
+                              <a class="public-link" :href="publicUrl(row.detail_path)" target="_blank" rel="noopener"
+                                 title="公開標本頁" aria-label="公開標本頁" x-html="externalIcon"></a>
+                            </template>
+                          </span>
                         </template>
                         <template x-if="!isLink(col) && col.units">
                           <div>
@@ -238,6 +244,10 @@
                                   </template>
                                   <a :href="recordUrl(u.entity_key)" target="_blank" rel="noopener"
                                      :title="chipTitle(u)" x-text="chipLabel(u)"></a>
+                                  <template x-if="u.detail_path">
+                                    <a class="public-link" :href="publicUrl(u.detail_path)" target="_blank" rel="noopener"
+                                       title="公開標本頁" aria-label="公開標本頁" x-html="externalIcon"></a>
+                                  </template>
                                 </li>
                               </template>
                             </ul>

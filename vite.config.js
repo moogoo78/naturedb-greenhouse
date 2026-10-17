@@ -12,6 +12,7 @@ export default defineConfig({
       '/api': proxy,
       '/admin': proxy,
       '/static': proxy,
+      '/specimens': proxy, // public specimen pages (detail_path)
     },
   },
 });
