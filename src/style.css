@@ -171,6 +171,10 @@ td.units { white-space: normal; min-width: 220px; }
 .unit-chip.preserved { background: #fff; }
 .unit-chip.dead a { color: var(--muted); text-decoration: line-through; }
 .unit-chip button.thumb img { width: 24px; height: 32px; }
+.unit-chip .basis-icon { display: inline-flex; margin-left: 4px; cursor: help; }
+.unit-chip .basis-icon svg { width: 14px; height: 14px; }
+.unit-chip .basis-icon.living { color: var(--accent); }
+.unit-chip .basis-icon.preserved { color: var(--muted); }
 
 button.cell-filter {
   padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left;

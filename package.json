@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@digital-go-jp/design-tokens": "2.0.1",
-    "alpinejs": "3.14.1"
+    "alpinejs": "3.14.9"
   },
   "devDependencies": {
     "vite": "5.4.10"

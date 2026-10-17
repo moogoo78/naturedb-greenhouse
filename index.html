@@ -189,7 +189,7 @@
           </div>
 
           <div class="stats" x-show="summary">
-            <div x-show="view === 'record'"><b x-text="total"></b><span>採集號 (records)</span></div>
+            <div x-show="rowsView === 'record'"><b x-text="total"></b><span>採集號 (records)</span></div>
             <template x-for="c in sourceCounts" :key="c.key">
               <div><b x-text="c.count"></b><span x-text="`${c.unit.label} (${c.unit.sub})`"></span></div>
             </template>
@@ -226,6 +226,10 @@
                             <ul class="unit-chips">
                               <template x-for="u in row.units" :key="u.unit_id">
                                 <li class="unit-chip" :class="{dead: isDead(u), preserved: !(unitSource(u) || {}).living}">
+                                  <span class="basis-icon" x-show="basisBadge(u.basis_of_record).svg"
+                                        :class="basisBadge(u.basis_of_record).className"
+                                        :title="basisBadge(u.basis_of_record).title"
+                                        x-html="basisBadge(u.basis_of_record).svg"></span>
                                   <template x-if="u.cover_image_url">
                                     <button type="button" class="thumb" @click="openImage(u, $el)"
                                             :aria-label="`影像 ${u.catalog_number || ''}`">
@@ -249,7 +253,7 @@
                             </template>
                           </span>
                         </template>
-                        <template x-if="!isLink(col) && col.badge">
+                        <template x-if="!isLink(col) && !!col.badge">
                           <span class="basis-badge" :class="badge(col, row).className"
                                 :title="badge(col, row).title" role="img" :aria-label="badge(col, row).title">
                             <span x-show="badge(col, row).svg" x-html="badge(col, row).svg"></span>
@@ -262,13 +266,13 @@
                               <button type="button" class="cell-filter" :title="`篩選：${cell(col, row)}`"
                                       @click="applyCellFilter(col, row)">
                                 <span x-show="!col.html" x-text="cell(col, row)"></span>
-                                <span x-show="col.html" x-html="col.html ? col.html(row) : ''"></span>
+                                <span x-show="!!col.html" x-html="col.html ? col.html(row) : ''"></span>
                               </button>
                             </template>
                             <template x-if="!canFilter(col, row)">
                               <span>
                                 <span x-show="!col.html" x-text="cell(col, row)"></span>
-                                <span x-show="col.html" x-html="col.html ? col.html(row) : ''"></span>
+                                <span x-show="!!col.html" x-html="col.html ? col.html(row) : ''"></span>
                               </span>
                             </template>
                             <small class="sub" x-show="col.sub && col.sub(row)" x-text="col.sub && col.sub(row)"></small>

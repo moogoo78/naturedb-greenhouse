@@ -46,6 +46,8 @@ Alpine.data('greenhouse', () => ({
   sort: config.defaultSort,
   page: 0,
   rows: [],
+  rowsView: 'unit', // the view `rows` were fetched for; the table renders by it
+  searchSeq: 0, // only the latest search may apply its response
   total: 0,
   summary: null,
   sourceCounts: [], // [{key, unit, count}] per searched source
@@ -228,6 +230,8 @@ Alpine.data('greenhouse', () => ({
 
   async search(page = 0) {
     if (!this.collection) return;
+    const seq = ++this.searchSeq;
+    const view = this.view;
     this.loading = true;
     this.error = '';
     this.page = page;
@@ -241,7 +245,7 @@ Alpine.data('greenhouse', () => ({
       const living = this.activeSources.filter((s) => s.living);
       const livingFields = [...this.types.map((t) => `annotation:${t.id}`), 'disposition'];
       const [list, main, livingFacets] = await Promise.all([
-        get(VIEWS[this.view], { filter, sort: this.sort, range: [start, start + config.pageSize] }),
+        get(VIEWS[view], { filter, sort: this.sort, range: [start, start + config.pageSize] }),
         get('/api/v1/units/facets', {
           filter,
           fields: ['collection', ...(this.mixed ? [] : livingFields)].join(','),
@@ -250,16 +254,18 @@ Alpine.data('greenhouse', () => ({
           ? get('/api/v1/units/facets', { filter: this.apiFilter(living), fields: livingFields.join(',') })
           : null,
       ]);
+      if (seq !== this.searchSeq) return; // a newer search is running
       this.rows = list.data;
+      this.rowsView = view;
       this.total = list.total;
       this.facets = this.mixed ? (livingFacets ? livingFacets.facets : {}) : main.facets;
       this.summary = main.summary;
       const counts = new Map(main.facets.collection.map((x) => [x.value, x.count]));
       this.sourceCounts = this.activeSources.map((s) => ({ key: s.key, unit: s.unit, count: counts.get(s.collection.id) || 0 }));
     } catch (e) {
-      this.fail(e);
+      if (seq === this.searchSeq) this.fail(e);
     } finally {
-      this.loading = false;
+      if (seq === this.searchSeq) this.loading = false;
     }
   },
 
@@ -378,14 +384,16 @@ Alpine.data('greenhouse', () => ({
     this.search(0);
   },
 
+  // by rowsView, not view: after a view switch the old rows stay until the new
+  // ones arrive, and must keep the columns they have the fields for
   get columns() {
     return config.columns.filter(
-      (c) => (!c.view || c.view === this.view) && (!c.source || this.source === ALL) && (!c.image || this.mixed),
+      (c) => (!c.view || c.view === this.rowsView) && (!c.source || this.source === ALL) && (!c.image || this.mixed),
     );
   },
 
   isLink(col) {
-    return col.link === this.view;
+    return col.link === this.rowsView;
   },
 
   // --- record view: a record's units as chips ------------------------------
@@ -446,10 +454,14 @@ Alpine.data('greenhouse', () => ({
     return this.mixed && col.mixedLabel ? col.mixedLabel : col.label;
   },
 
-  // a badge column's value (e.g. basis_of_record) as icon + tooltip; values
-  // missing from config.basisOfRecord fall back to the raw text
+  // a badge column's value (e.g. basis_of_record) as icon + tooltip
   badge(col, row) {
-    const value = col.badge(row) || '';
+    return this.basisBadge(col.badge(row));
+  },
+
+  // basis_of_record -> { svg, label, title, className }; values missing from
+  // config.basisOfRecord fall back to the raw text
+  basisBadge(value = '') {
     const b = config.basisOfRecord[value];
     if (!b) return { svg: '', label: value, title: value, className: '' };
     return { svg: icons[b.icon] || '', label: b.label, title: `${value} · ${b.label}`, className: b.className };
