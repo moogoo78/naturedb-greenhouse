@@ -388,7 +388,7 @@ Alpine.data('greenhouse', () => ({
   // ones arrive, and must keep the columns they have the fields for
   get columns() {
     return config.columns.filter(
-      (c) => (!c.view || c.view === this.rowsView) && (!c.source || this.source === ALL) && (!c.image || this.mixed),
+      (c) => (!c.view || c.view === this.rowsView) && (!c.source || this.source === ALL),
     );
   },
 

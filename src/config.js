@@ -70,7 +70,7 @@ export default {
   // to make the cell a click-to-filter button, mixedLabel when non-living sources
   // are included, source: true to show only in "all" (the source label, or badge(row): a
   // basisOfRecord value drawn as an icon badge), image: true
-  // for the cover image thumbnail, only with non-living sources; view: 'unit' |
+  // for the cover image thumbnail; view: 'unit' |
   // 'record' to show in one list view only; link: 'unit' | 'record' links the
   // cell to the admin form in that view; units: true lists the record's units)
   columns: [
@@ -85,7 +85,7 @@ export default {
     },
     // shown when several sources are searched: the unit's basis_of_record as a badge
     { label: '來源', source: true, badge: (r) => r.basis_of_record, view: 'unit', className: 'basis' },
-    { label: '影像', image: true, view: 'unit' }, // shown when a source with images is searched
+    { label: '影像', image: true, view: 'unit' },
     {
       label: '採集者',
       value: (r) => (r.collector ? r.collector.full_name || r.collector.full_name_en : r.verbatim_collector),
