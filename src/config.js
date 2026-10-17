@@ -60,7 +60,7 @@ export default {
   // table columns: label + value(row) (+ optional sort key understood by the API,
   // html(row) for markup built from escaped text, filter: 'collector' | 'taxon'
   // to make the cell a click-to-filter button, mixedLabel when non-living sources
-  // are included, source: true for the source label, only in "all", image: true
+  // are included, source: true for the source label (or value(row) if set), only in "all", image: true
   // for the cover image thumbnail, only with non-living sources; view: 'unit' |
   // 'record' to show in one list view only; link: 'unit' | 'record' links the
   // cell to the admin form in that view; units: true lists the record's units)
@@ -74,7 +74,8 @@ export default {
       link: 'unit',
       view: 'unit',
     },
-    { label: '來源', source: true, view: 'unit' }, // shown when several sources are searched
+    // shown when several sources are searched; value(row) replaces the source label
+    { label: '來源', source: true, value: (r) => r.basis_of_record, view: 'unit' },
     { label: '影像', image: true, view: 'unit' }, // shown when a source with images is searched
     {
       label: '採集者',

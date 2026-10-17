@@ -446,7 +446,7 @@ Alpine.data('greenhouse', () => ({
   },
 
   cell(col, row) {
-    if (col.source) return this.sourceLabel(row.collection_id);
+    if (col.source && !col.value) return this.sourceLabel(row.collection_id);
     if (col.annotation) {
       const v = row.annotations[col.annotation] || '';
       const type = this.types.find((t) => t.name === col.annotation);
