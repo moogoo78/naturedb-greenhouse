@@ -136,6 +136,14 @@ td a { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-num
 button.thumb { padding: 0; border: 1px solid var(--line); border-radius: 4px; background: #fff; line-height: 0; }
 button.thumb img { width: 48px; height: 64px; object-fit: cover; border-radius: 3px; }
 button.thumb:hover { border-color: var(--accent); }
+td.basis { width: 1%; text-align: center; }
+.basis-badge {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px;
+  padding: 0 4px; border-radius: 999px; font-size: 12px; cursor: help; color: var(--muted); background: var(--bg);
+}
+.basis-badge svg { display: block; }
+.basis-badge.living { color: var(--accent); background: var(--accent-soft); }
+.basis-badge.preserved { color: var(--muted); background: var(--line); }
 
 .lightbox {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;

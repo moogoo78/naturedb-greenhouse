@@ -284,6 +284,7 @@
 [data-theme='dads'] td a { color: var(--link); font-weight: var(--font-weight-700); }
 [data-theme='dads'] td a:visited { color: var(--link-visited); }
 [data-theme='dads'] td.notes { color: var(--muted); }
+[data-theme='dads'] .basis-badge.preserved { background: var(--color-neutral-solid-gray-100); }
 [data-theme='dads'] .sub { font-size: var(--font-size-14); }
 [data-theme='dads'] .table-wrap.loading { opacity: 0.4; }
 

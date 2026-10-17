@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import config from './config.js';
 import { get, AuthError, loginUrl, exportUrl, recordUrl } from './api.js';
 import { abbreviateGenus, escape, scientificNameHtml } from './names.js';
+import icons from './icons.js';
 import './style.css';
 import './theme-dads.css';
 
@@ -445,8 +446,18 @@ Alpine.data('greenhouse', () => ({
     return this.mixed && col.mixedLabel ? col.mixedLabel : col.label;
   },
 
+  // a badge column's value (e.g. basis_of_record) as icon + tooltip; values
+  // missing from config.basisOfRecord fall back to the raw text
+  badge(col, row) {
+    const value = col.badge(row) || '';
+    const b = config.basisOfRecord[value];
+    if (!b) return { svg: '', label: value, title: value, className: '' };
+    return { svg: icons[b.icon] || '', label: b.label, title: `${value} · ${b.label}`, className: b.className };
+  },
+
   cell(col, row) {
-    if (col.source && !col.value) return this.sourceLabel(row.collection_id);
+    if (col.badge) return col.badge(row) || '';
+    if (col.source) return this.sourceLabel(row.collection_id);
     if (col.annotation) {
       const v = row.annotations[col.annotation] || '';
       const type = this.types.find((t) => t.name === col.annotation);

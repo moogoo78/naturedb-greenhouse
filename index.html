@@ -249,7 +249,14 @@
                             </template>
                           </span>
                         </template>
-                        <template x-if="!isLink(col) && !col.image && !col.units">
+                        <template x-if="!isLink(col) && col.badge">
+                          <span class="basis-badge" :class="badge(col, row).className"
+                                :title="badge(col, row).title" role="img" :aria-label="badge(col, row).title">
+                            <span x-show="badge(col, row).svg" x-html="badge(col, row).svg"></span>
+                            <span x-show="!badge(col, row).svg" x-text="badge(col, row).label"></span>
+                          </span>
+                        </template>
+                        <template x-if="!isLink(col) && !col.image && !col.units && !col.badge">
                           <span>
                             <template x-if="canFilter(col, row)">
                               <button type="button" class="cell-filter" :title="`篩選：${cell(col, row)}`"
