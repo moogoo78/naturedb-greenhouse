@@ -52,10 +52,13 @@ with the common filters at the top level.
 Serve the build from its own subdomain on the same parent domain as naturedb (e.g. `greenhouse.biodiv.tw` next to `hast.biodiv.tw`):
 
 ```sh
-VITE_NATUREDB_BASE=https://hast.biodiv.tw docker compose -f compose.prod.yml up -d --build
+VITE_NATUREDB_BASE=https://hast.biodiv.tw GREENHOUSE_HOST=greenhouse.biodiv.tw \
+  docker compose -f compose.prod.yml up -d --build
 ```
 
-Then route `greenhouse.<domain>` to port 8091 in the reverse proxy. Set these naturedb env vars, then run `docker compose up -d` (a restart does not reload env):
+The container joins naturedb's network (`NATUREDB_NETWORK`, default `naturedb_default`) and naturedb's
+Traefik routes `GREENHOUSE_HOST` to it and issues its certificate; the hostname needs a Cloudflare DNS
+record first. Set these naturedb env vars, then run `docker compose up -d` (a restart does not reload env):
 
 ```
 CORS_ALLOWED_ORIGINS=https://greenhouse.biodiv.tw
