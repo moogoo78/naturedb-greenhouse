@@ -11,7 +11,7 @@ ARG VITE_NATUREDB_BASE=
 ENV VITE_NATUREDB_BASE=$VITE_NATUREDB_BASE
 RUN npm run build
 
-# prod: static files only
+# prod: static files + same-origin proxy to naturedb
 FROM nginx:1.27-alpine AS prod
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html

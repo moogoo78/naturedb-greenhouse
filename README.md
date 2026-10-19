@@ -49,23 +49,19 @@ with the common filters at the top level.
 
 ## Production
 
-Serve the build from its own subdomain on the same parent domain as naturedb (e.g. `greenhouse.biodiv.tw` next to `hast.biodiv.tw`):
+Runs on the naturedb host, at its own hostname (e.g. `begonia.naturedb.org`):
 
 ```sh
-VITE_NATUREDB_BASE=https://hast.biodiv.tw GREENHOUSE_HOST=greenhouse.biodiv.tw \
-  docker compose -f compose.prod.yml up -d --build
+GREENHOUSE_HOST=begonia.naturedb.org docker compose -f compose.prod.yml up -d --build
 ```
 
-The container joins naturedb's network (`NATUREDB_NETWORK`, default `naturedb_default`) and naturedb's
-Traefik routes `GREENHOUSE_HOST` to it and issues its certificate; the hostname needs a Cloudflare DNS
-record first. Set these naturedb env vars, then run `docker compose up -d` (a restart does not reload env):
+The container joins naturedb's network (`NATUREDB_NETWORK`, default `naturedb_default`); naturedb's
+Traefik routes `GREENHOUSE_HOST` to it and issues its certificate (Cloudflare DNS challenge, so the
+hostname must be in naturedb's Cloudflare zone).
 
-```
-CORS_ALLOWED_ORIGINS=https://greenhouse.biodiv.tw
-JWT_COOKIE_DOMAIN=.biodiv.tw
-```
-
-`JWT_COOKIE_DOMAIN` lets the login cookie reach the client's subdomain. naturedb only redirects
-after login to origins listed in `CORS_ALLOWED_ORIGINS`.
+Like the dev Vite proxy, nginx forwards `/api`, `/admin`, `/static` and `/specimens` to naturedb's
+flask (`NATUREDB_UPSTREAM`, default `naturedb-flask-prod-container:8001`) with
+`Host: NATUREDB_UPSTREAM_HOST` (default `hast.biodiv.tw`, which picks the site). The client is
+same-origin, so naturedb needs no CORS or cookie-domain settings and the login cookie is host-only.
 
 Data prerequisite (once per DB): run `scripts/sql/greenhouse-unit-annotations.sql` in naturedb.

@@ -1,11 +1,13 @@
-# prod: static build behind naturedb's Traefik (joins its network, routed by Host label)
+# prod: static build behind naturedb's Traefik (joins its network, routed by Host label).
+# nginx proxies naturedb's paths to its flask container, so the client stays same-origin.
 services:
   web:
     build:
       context: .
       target: prod
-      args:
-        VITE_NATUREDB_BASE: ${VITE_NATUREDB_BASE:?set VITE_NATUREDB_BASE, e.g. https://hast.biodiv.tw}
+    environment:
+      NATUREDB_UPSTREAM: ${NATUREDB_UPSTREAM:-naturedb-flask-prod-container:8001}
+      NATUREDB_UPSTREAM_HOST: ${NATUREDB_UPSTREAM_HOST:-hast.biodiv.tw}
     expose:
       - 80
     restart: unless-stopped
@@ -13,7 +15,7 @@ services:
       - naturedb
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.greenhouse.rule=Host(`${GREENHOUSE_HOST:?set GREENHOUSE_HOST, e.g. greenhouse.biodiv.tw}`)"
+      - "traefik.http.routers.greenhouse.rule=Host(`${GREENHOUSE_HOST:?set GREENHOUSE_HOST, e.g. begonia.naturedb.org}`)"
       - "traefik.http.routers.greenhouse.entrypoints=websecure"
       - "traefik.http.routers.greenhouse.tls.certresolver=myresolver"
       - "traefik.http.services.greenhouse.loadbalancer.server.port=80"
