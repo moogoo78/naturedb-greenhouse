@@ -27,6 +27,7 @@
             <button type="button" :class="{active: theme === 'dads'}" :aria-pressed="theme === 'dads'" @click="setTheme('dads')">DADS</button>
           </div>
           <span x-show="user" x-text="user && user.username"></span>
+          <a x-show="user" :href="logoutUrl()">登出</a>
         </div>
       </header>
 

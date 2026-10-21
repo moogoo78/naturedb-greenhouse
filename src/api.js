@@ -31,6 +31,14 @@ export function loginUrl() {
   return url('/admin/login', { next });
 }
 
+// naturedb clears both login cookies (session + JWT), then shows its login
+// page, which returns to this client's start page
+export function logoutUrl() {
+  const here = window.location;
+  const next = BASE ? here.origin + here.pathname : here.pathname;
+  return url('/admin/logout', { next });
+}
+
 export const exportUrl = (filter, format, sort) => url('/api/v1/units/export', { filter, format, sort });
 
 export const recordUrl = (entityKey) => url(`/admin/records/${entityKey}`);

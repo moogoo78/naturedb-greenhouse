@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs';
 import config from './config.js';
-import { get, AuthError, loginUrl, exportUrl, recordUrl, publicUrl } from './api.js';
+import { get, AuthError, loginUrl, logoutUrl, exportUrl, recordUrl, publicUrl } from './api.js';
 import { abbreviateGenus, escape, scientificNameHtml } from './names.js';
 import icons from './icons.js';
 import './style.css';
@@ -558,6 +558,7 @@ Alpine.data('greenhouse', () => ({
 
   recordUrl,
   publicUrl,
+  logoutUrl,
   externalIcon: icons.external,
 
   exportHref(format) {
